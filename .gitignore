@@ -1,5 +1,8 @@
 **/bin/
 **/obj/
+src/*/App_Data/*.db
+src/*/App_Data/*.db-shm
+src/*/App_Data/*.db-wal
 .vs/
 *.user
 *.suo

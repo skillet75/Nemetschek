@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Shared.Contracts;
+using UserAccess.Api.Infrastructure.Persistence;
 
 namespace UserAccess.Api.Infrastructure;
 
@@ -26,6 +27,7 @@ public static class UserAccessApiBootstrap
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddUserPersistence(builder.Configuration, builder.Environment);
 
         var app = builder.Build();
 

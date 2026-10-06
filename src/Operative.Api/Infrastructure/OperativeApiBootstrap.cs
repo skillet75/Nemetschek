@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Shared.Contracts;
+using Operative.Api.Infrastructure.Persistence;
 
 namespace Operative.Api.Infrastructure;
 
@@ -26,6 +27,7 @@ public static class OperativeApiBootstrap
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddOperativePersistence(builder.Configuration, builder.Environment);
 
         var app = builder.Build();
 
