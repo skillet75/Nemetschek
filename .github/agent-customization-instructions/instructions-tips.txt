@@ -1,0 +1,16 @@
+Tips for writing effective instructions
+Keep your instructions short and self-contained. Each instruction should be a single, simple statement. If you need to provide multiple pieces of information, use multiple instructions.
+
+Include the reasoning behind rules. When instructions explain why a convention exists, the AI makes better decisions in edge cases. For example: "Use date-fns instead of moment.js because moment.js is deprecated and increases bundle size."
+
+Show preferred and avoided patterns with concrete code examples. The AI responds more effectively to examples than to abstract rules.
+
+Focus on non-obvious rules. Skip conventions that standard linters or formatters already enforce.
+
+For task or language-specific instructions, use multiple *.instructions.md files per topic and apply them selectively by using the applyTo property.
+
+Store project-specific instructions in your workspace to share them with other team members and include them in your version control.
+
+Reuse and reference instructions files in your prompt files and custom agents to keep them clean and focused, and to avoid duplicating instructions.
+
+Whitespace between instructions is ignored, so you can format instructions as a single paragraph, on separate lines, or separated by blank lines for legibility.
