@@ -1,5 +1,22 @@
 namespace Shared.Contracts;
 
+public sealed class ApiException : Exception
+{
+    public int StatusCode { get; }
+
+    public ApiException(string message, int statusCode = 500)
+        : base(message)
+    {
+        StatusCode = statusCode;
+    }
+
+    public ApiException(string message, Exception innerException, int statusCode = 500)
+        : base(message, innerException)
+    {
+        StatusCode = statusCode;
+    }
+}
+
 public sealed record ApiResponse<T>(T Data, string Message, DateTimeOffset Timestamp)
 {
     public static ApiResponse<T> Ok(T data, string message = "Request completed successfully.") =>

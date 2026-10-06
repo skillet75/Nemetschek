@@ -29,7 +29,8 @@ This plan is based on the task description in the repository and the PDF version
   - `Operative.Api`
   - `Shared` (shared DTOs, constants, validation helpers, JWT settings)
   - `Infrastructure` or `Data` projects if needed for persistence reuse
-- Database: PostgreSQL with Entity Framework Core or SQL Server with EF Core
+- Database: SQLite with Entity Framework Core, using a separate database file owned by each service
+- SQLite trade-offs: no database server installation is needed, and the files are easy to create and move for local development. SQLite is appropriate for this interview exercise, but its single-writer model and limited suitability for shared, multi-instance deployments make PostgreSQL or SQL Server a better choice if usage or deployment requirements grow.
 - Authentication: JWT Bearer tokens issued by `UserAccess.Api` and validated by `Operative.Api`
 - Error handling: centralized exception middleware and consistent API error response contracts
 - Validation: FluentValidation or DataAnnotations on request DTOs and API model validation
@@ -45,7 +46,7 @@ This plan is based on the task description in the repository and the PDF version
   - `Shared` class library
 - Acceptance criteria:
   - Both projects compile in isolation
-  - The solution can run locally with a configured database connection
+  - The solution can run locally with each service's configured SQLite database file
 
 ### Task 2: Set up the shared baseline
 - Goal: establish common conventions for the project
@@ -64,7 +65,7 @@ This plan is based on the task description in the repository and the PDF version
 - Deliverables:
   - User entity with fields: id, first name, last name, email, password hash, image path or base64 payload, created date
   - Dice record entity with fields: id, user id, die1, die2, sum, created date
-  - EF Core DbContext for each service or shared database model if using one DB
+  - Separate EF Core DbContexts and SQLite database files for each service to preserve data ownership
   - Initial migrations
 - Acceptance criteria:
   - Users can be saved to the database
@@ -138,11 +139,11 @@ This plan is based on the task description in the repository and the PDF version
 - Deliverables:
   - sorting parameters for date/time and dice sum
   - descending/ascending direction flags
-  - precedence logic so date time sorting can take priority when both are applied
+  - when both sorts are requested, sort by dice sum first and use date/time as the secondary sort
   - deterministic ordering for same-value rows
 - Acceptance criteria:
   - Sorting order matches requested direction for each column
-  - When multiple sort modes are combined, precedence behaves as defined by the task
+  - When both sorts are combined, dice sum has higher priority as specified in the task, with date/time breaking ties
   - The order is stable across repeated requests
 
 ### Task 10: Add pagination support
