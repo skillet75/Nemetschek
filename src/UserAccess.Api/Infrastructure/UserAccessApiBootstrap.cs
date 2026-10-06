@@ -1,5 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Shared.Contracts;
+using UserAccess.Api.Domain.Entities;
 using UserAccess.Api.Infrastructure.Persistence;
 
 namespace UserAccess.Api.Infrastructure;
@@ -27,9 +30,16 @@ public static class UserAccessApiBootstrap
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddControllers();
         builder.Services.AddUserPersistence(builder.Configuration, builder.Environment);
 
         var app = builder.Build();
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+            dbContext.Database.Migrate();
+        }
 
         app.UseExceptionHandler(exceptionHandlerApp =>
         {
@@ -73,6 +83,8 @@ public static class UserAccessApiBootstrap
         app.MapGet("/api/info", () => Results.Ok(ApiResponse<string>.Ok(
             "UserAccess.Api",
             "User access microservice for user registration and authentication.")));
+
+        app.MapControllers();
 
         return app;
     }
