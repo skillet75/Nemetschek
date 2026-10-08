@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Shared.Contracts;
 using Operative.Api.Application.Authentication;
+using Operative.Api.Application.Dice;
 using Operative.Api.Infrastructure.Authentication;
 using Operative.Api.Infrastructure.Persistence;
 
@@ -68,6 +70,7 @@ public static class OperativeApiBootstrap
         });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddControllers();
         var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
         if (string.IsNullOrWhiteSpace(jwtSettings.Issuer) ||
@@ -105,9 +108,16 @@ public static class OperativeApiBootstrap
         });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        builder.Services.AddScoped<DiceRollService>();
         builder.Services.AddOperativePersistence(builder.Configuration, builder.Environment);
 
         var app = builder.Build();
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<OperativeDbContext>();
+            dbContext.Database.Migrate();
+        }
 
         app.UseExceptionHandler(exceptionHandlerApp =>
         {
@@ -164,6 +174,8 @@ public static class OperativeApiBootstrap
             .WithDescription("Resolves the user identifier from the validated JWT subject claim.")
             .Produces<ApiResponse<Guid>>(StatusCodes.Status200OK)
             .RequireAuthorization();
+
+        app.MapControllers();
 
         return app;
     }

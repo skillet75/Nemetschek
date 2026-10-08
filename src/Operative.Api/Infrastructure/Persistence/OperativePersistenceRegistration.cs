@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Operative.Api.Application.Dice;
 
 namespace Operative.Api.Infrastructure.Persistence;
 
@@ -28,6 +29,7 @@ public static class OperativePersistenceRegistration
         }
 
         services.AddDbContext<OperativeDbContext>(options => options.UseSqlite(sqliteConnection.ToString()));
+        services.AddScoped<IDiceRollRepository, DiceRollRepository>();
         return services;
     }
 }

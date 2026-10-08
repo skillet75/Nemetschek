@@ -28,3 +28,11 @@ public sealed record ErrorResponse(string Message, int StatusCode, string? Trace
     public static ErrorResponse FromException(Exception exception, int statusCode = 500, string? traceId = null) =>
         new(exception.Message, statusCode, traceId ?? Guid.NewGuid().ToString("N"));
 }
+
+public sealed record DiceRollResponse(
+    Guid Id,
+    Guid UserId,
+    int Die1,
+    int Die2,
+    int Sum,
+    DateTime CreatedAtUtc);
