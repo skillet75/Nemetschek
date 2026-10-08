@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using UserAccess.Api.Application.Authentication;
 
 namespace UserAccess.Api.Infrastructure.Persistence;
 
@@ -28,6 +29,7 @@ public static class UserPersistenceRegistration
         }
 
         services.AddDbContext<UserDbContext>(options => options.UseSqlite(sqliteConnection.ToString()));
+        services.AddScoped<IUserRepository, UserRepository>();
         return services;
     }
 }

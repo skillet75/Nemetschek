@@ -33,15 +33,38 @@ Status: Complete
 - `dotnet ef migrations has-pending-model-changes` reported no model changes for either service.
 - `git diff --check` passed; service-local SQLite files are ignored by Git.
 
+## Task 4 — user creation endpoint
+Status: Complete
+
+### Deliverables
+- `POST /api/users` registration flow
+- request DTO validation and duplicate email checks
+- password hashing with PBKDF2
+- user response contract
+
+### Verification
+- `dotnet test .\tests\UserAccess.Api.Tests\UserAccess.Api.Tests.csproj -nologo` passed.
+
+## Task 5 — token creation endpoint
+Status: Complete
+
+### Deliverables
+- `POST /api/auth/token`
+- `CreateTokenRequest` validation for email/password
+- password verification against stored hash
+- JWT creation using configured issuer, audience, expiration, and signing key
+- `AuthTokenResponse` payload with access token and expiry metadata
+
+### Verification
+- `dotnet test .\tests\UserAccess.Api.Tests\UserAccess.Api.Tests.csproj -nologo` passed.
+
 ## Remaining tasks
 
-1. Task 4: user creation endpoint
-2. Task 5: token creation endpoint
-3. Task 6: JWT auth in operative service
-4. Task 7: dice roll endpoint
-5. Task 8: history query with filters
-6. Task 9: sorting and precedence
-7. Task 10: pagination
-8. Task 11: centralized error handling and validation
-9.  Task 12: tests
-10. Task 13: deployment-ready docs and configuration
+1. Task 6: JWT auth in operative service
+2. Task 7: dice roll endpoint
+3. Task 8: history query with filters
+4. Task 9: sorting and precedence
+5. Task 10: pagination
+6. Task 11: centralized error handling and validation
+7. Task 12: tests
+8. Task 13: deployment-ready docs and configuration

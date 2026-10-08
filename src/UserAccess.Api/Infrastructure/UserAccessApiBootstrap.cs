@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts;
-using UserAccess.Api.Domain.Entities;
+using UserAccess.Api.Application.Authentication;
 using UserAccess.Api.Infrastructure.Persistence;
 
 namespace UserAccess.Api.Infrastructure;
@@ -31,6 +31,8 @@ public static class UserAccessApiBootstrap
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddControllers();
+        builder.Services.AddScoped<TokenAuthenticationService>();
+        builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
         builder.Services.AddUserPersistence(builder.Configuration, builder.Environment);
 
         var app = builder.Build();

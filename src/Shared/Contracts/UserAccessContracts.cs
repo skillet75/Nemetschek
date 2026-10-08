@@ -2,6 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Shared.Contracts;
 
+public sealed class JwtSettings
+{
+    public string Issuer { get; set; } = "https://localhost";
+    public string Audience { get; set; } = "UserAccess.Api";
+    public string Key { get; set; } = "demo-local-development-signing-key-for-interview";
+    public int ExpiryMinutes { get; set; } = 60;
+}
+
 public sealed record CreateUserRequest
 {
     [Required]
@@ -28,6 +36,23 @@ public sealed record CreateUserRequest
     public string? Image { get; init; }
 }
 
+public record CreateTokenRequest
+{
+    [Required]
+    [EmailAddress]
+    [StringLength(254)]
+    public string Email { get; init; } = string.Empty;
+
+    [Required]
+    [StringLength(128, MinimumLength = 8)]
+    public string Password { get; init; } = string.Empty;
+}
+
+public record TokenRequest : CreateTokenRequest;
+public record LoginRequest : CreateTokenRequest;
+public record AuthTokenRequest : CreateTokenRequest;
+public record AccessTokenRequest : CreateTokenRequest;
+
 public sealed record UserResponse(
     Guid Id,
     string FirstName,
@@ -35,3 +60,7 @@ public sealed record UserResponse(
     string Email,
     string? Image,
     DateTime CreatedAtUtc);
+
+public sealed record AuthTokenResponse(string AccessToken, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");
+public sealed record TokenResponse(string AccessToken, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");
+public sealed record AccessTokenResponse(string Token, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");

@@ -60,4 +60,67 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<WebApplication
         var secondResponse = await client.PostAsJsonAsync("/api/users", request);
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task PostAuthToken_WithValidCredentials_ReturnsJwt()
+    {
+        using var client = _factory.CreateClient();
+        var email = $"token-{Guid.NewGuid():N}@example.com";
+        var password = "Test123!";
+
+        var createUser = new CreateUserRequest
+        {
+            FirstName = "Alan",
+            LastName = "Turing",
+            Email = email,
+            Password = password
+        };
+
+        var createResponse = await client.PostAsJsonAsync("/api/users", createUser);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var request = new CreateTokenRequest
+        {
+            Email = email,
+            Password = password
+        };
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<ApiResponse<AuthTokenResponse>>();
+        Assert.NotNull(payload);
+        Assert.False(string.IsNullOrWhiteSpace(payload!.Data.AccessToken));
+        Assert.Equal("Bearer", payload.Data.TokenType);
+        Assert.True(payload.Data.ExpiresAtUtc > DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public async Task PostAuthToken_WithInvalidCredentials_ReturnsUnauthorized()
+    {
+        using var client = _factory.CreateClient();
+        var email = $"invalid-{Guid.NewGuid():N}@example.com";
+
+        var createUser = new CreateUserRequest
+        {
+            FirstName = "Margaret",
+            LastName = "Hamilton",
+            Email = email,
+            Password = "Test123!"
+        };
+
+        var createResponse = await client.PostAsJsonAsync("/api/users", createUser);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var request = new CreateTokenRequest
+        {
+            Email = email,
+            Password = "WrongPassword!"
+        };
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }
