@@ -3,7 +3,10 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 using Shared.Contracts;
 using Operative.Api.Application.Authentication;
 using Operative.Api.Infrastructure.Authentication;
@@ -23,7 +26,38 @@ public static class OperativeApiBootstrap
         builder.Logging.AddConsole();
         builder.Logging.AddDebug();
 
-        builder.Services.AddOpenApi();
+        builder.Services.AddOpenApi(options =>
+        {
+            options.AddDocumentTransformer((document, _, _) =>
+            {
+                document.Components ??= new OpenApiComponents();
+                document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+                document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "Enter a valid token issued by UserAccess.Api."
+                };
+
+                return Task.CompletedTask;
+            });
+            options.AddOperationTransformer((operation, context, _) =>
+            {
+                var endpointMetadata = context.Description.ActionDescriptor.EndpointMetadata;
+                if (endpointMetadata.OfType<IAuthorizeData>().Any() &&
+                    !endpointMetadata.OfType<IAllowAnonymous>().Any())
+                {
+                    operation.Security ??= [];
+                    operation.Security.Add(new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
+                    });
+                }
+
+                return Task.CompletedTask;
+            });
+        });
         builder.Services.AddProblemDetails(options =>
         {
             options.CustomizeProblemDetails = context =>
@@ -113,6 +147,7 @@ public static class OperativeApiBootstrap
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi().AllowAnonymous();
+            app.MapScalarApiReference().AllowAnonymous();
         }
 
         app.MapHealthChecks("/health").AllowAnonymous();

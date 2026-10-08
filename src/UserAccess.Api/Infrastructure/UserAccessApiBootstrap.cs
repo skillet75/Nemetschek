@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 using Shared.Contracts;
 using UserAccess.Api.Application.Authentication;
 using UserAccess.Api.Infrastructure.Persistence;
@@ -78,6 +79,7 @@ public static class UserAccessApiBootstrap
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference();
         }
 
         app.MapHealthChecks("/health");
