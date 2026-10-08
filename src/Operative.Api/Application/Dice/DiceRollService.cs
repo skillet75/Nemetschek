@@ -21,4 +21,19 @@ public sealed class DiceRollService(IDiceRollRepository diceRollRepository)
             diceRoll.Sum,
             diceRoll.CreatedAtUtc);
     }
+
+    public async Task<IReadOnlyList<DiceRollResponse>> GetHistoryAsync(Guid userId, DiceHistoryFilter? filter, CancellationToken cancellationToken)
+    {
+        var history = await diceRollRepository.GetByUserAsync(userId, filter, cancellationToken);
+
+        return history
+            .Select(x => new DiceRollResponse(
+                x.Id,
+                x.UserId,
+                x.Die1,
+                x.Die2,
+                x.Sum,
+                x.CreatedAtUtc))
+            .ToList();
+    }
 }

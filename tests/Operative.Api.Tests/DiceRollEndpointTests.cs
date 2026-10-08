@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Operative.Api.Domain.Entities;
 using Operative.Api.Infrastructure.Persistence;
 using Shared.Contracts;
 using Xunit;
@@ -60,6 +61,52 @@ public sealed class DiceRollEndpointTests : IClassFixture<WebApplicationFactory<
         var savedRoll = await dbContext.DiceRolls.SingleOrDefaultAsync(x => x.Id == payload.Data.Id);
         Assert.NotNull(savedRoll);
         Assert.Equal(userId, savedRoll!.UserId);
+    }
+
+    [Fact]
+    public async Task GetDiceHistory_WithUserScopedFilter_ReturnsOnlyCurrentUsersRecords()
+    {
+        using var client = _factory.CreateClient();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(userId));
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<OperativeDbContext>();
+            dbContext.DiceRolls.AddRange(
+                new DiceRoll(userId, 1, 2),
+                new DiceRoll(userId, 3, 4),
+                new DiceRoll(otherUserId, 5, 6));
+            await dbContext.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/dice/history");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        Assert.NotNull(payload);
+        Assert.Equal(2, payload!.Data.Count);
+        Assert.All(payload.Data, x => Assert.Equal(userId, x.UserId));
+
+        var currentYear = DateTime.UtcNow.Year;
+        var monthYear = $"{DateTime.UtcNow.Month:D2}/{currentYear}";
+        var day = DateTime.UtcNow.Day.ToString();
+
+        var yearResponse = await client.GetAsync($"/api/dice/history?year={currentYear}");
+        var yearPayload = await yearResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        Assert.NotNull(yearPayload);
+        Assert.Equal(2, yearPayload!.Data.Count);
+
+        var monthYearResponse = await client.GetAsync($"/api/dice/history?monthYear={Uri.EscapeDataString(monthYear)}");
+        var monthYearPayload = await monthYearResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        Assert.NotNull(monthYearPayload);
+        Assert.Equal(2, monthYearPayload!.Data.Count);
+
+        var dayResponse = await client.GetAsync($"/api/dice/history?day={Uri.EscapeDataString(day)}");
+        var dayPayload = await dayResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        Assert.NotNull(dayPayload);
+        Assert.Equal(2, dayPayload!.Data.Count);
     }
 
     private static string CreateToken(Guid userId)

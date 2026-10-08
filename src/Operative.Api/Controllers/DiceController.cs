@@ -29,4 +29,20 @@ public sealed class DiceController : ControllerBase
 
         return Ok(ApiResponse<DiceRollResponse>.Ok(response, "Dice roll recorded successfully."));
     }
+
+    [HttpGet("history")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<DiceRollResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<DiceRollResponse>>>> GetHistoryAsync(
+        [FromQuery(Name = "all")] bool? all,
+        [FromQuery] int? year,
+        [FromQuery] string? monthYear,
+        [FromQuery] string? day,
+        CancellationToken cancellationToken)
+    {
+        var filter = DiceHistoryFilter.FromQuery(all, year, monthYear, day);
+        var response = await _diceRollService.GetHistoryAsync(_currentUser.UserId, filter, cancellationToken);
+
+        return Ok(ApiResponse<IReadOnlyList<DiceRollResponse>>.Ok(response, "Dice roll history retrieved successfully."));
+    }
 }
