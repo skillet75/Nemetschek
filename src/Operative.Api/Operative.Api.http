@@ -1,6 +1,19 @@
 @Operative.Api_HostAddress = http://localhost:5253
+@token = paste-access-token-here
 
-GET {{Operative.Api_HostAddress}}/weatherforecast/
+### Public health check
+GET {{Operative.Api_HostAddress}}/health
+
+### Public service information
+GET {{Operative.Api_HostAddress}}/api/info
+
+### Current user without a token (expect 401)
+GET {{Operative.Api_HostAddress}}/api/me
+Accept: application/json
+
+### Current user with a JWT from UserAccess.Api
+GET {{Operative.Api_HostAddress}}/api/me
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
