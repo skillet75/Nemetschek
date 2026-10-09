@@ -23,7 +23,10 @@ public sealed class UserRegistrationService(IUserRepository userRepository, IPas
             image?.Data,
             image?.MediaType);
 
-        await userRepository.AddAsync(user, cancellationToken);
+        if (!await userRepository.AddAsync(user, cancellationToken))
+        {
+            return null;
+        }
         return new UserResponse(
             user.Id,
             user.FirstName,

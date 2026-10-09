@@ -48,11 +48,6 @@ public record CreateTokenRequest
     public string Password { get; init; } = string.Empty;
 }
 
-public record TokenRequest : CreateTokenRequest;
-public record LoginRequest : CreateTokenRequest;
-public record AuthTokenRequest : CreateTokenRequest;
-public record AccessTokenRequest : CreateTokenRequest;
-
 public sealed record UserResponse(
     Guid Id,
     string FirstName,
@@ -62,5 +57,3 @@ public sealed record UserResponse(
     DateTime CreatedAtUtc);
 
 public sealed record AuthTokenResponse(string AccessToken, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");
-public sealed record TokenResponse(string AccessToken, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");
-public sealed record AccessTokenResponse(string Token, DateTimeOffset ExpiresAtUtc, string TokenType = "Bearer");

@@ -1,14 +1,15 @@
 using System.Security.Cryptography;
+using UserAccess.Api.Application.Authentication;
 
 namespace UserAccess.Api.Infrastructure;
 
-public static class PasswordHasher
+public sealed class PasswordHasher : IPasswordHasher
 {
     private const int SaltSize = 16;
     private const int KeySize = 32;
     private const int Iterations = 200_000;
 
-    public static string HashPassword(string password)
+    public string HashPassword(string password)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
@@ -18,7 +19,7 @@ public static class PasswordHasher
         return $"pbkdf2${Iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
-    public static bool VerifyPassword(string password, string hashedPassword)
+    public bool VerifyPassword(string password, string hashedPassword)
     {
         if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(hashedPassword))
         {

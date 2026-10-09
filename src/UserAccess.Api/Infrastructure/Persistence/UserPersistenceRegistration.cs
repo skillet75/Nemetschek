@@ -31,7 +31,7 @@ public static class UserPersistenceRegistration
 
         services.AddDbContext<UserDbContext>(options => options.UseSqlite(sqliteConnection.ToString()));
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<UserRegistrationService>();
         return services;
     }
