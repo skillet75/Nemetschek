@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -90,23 +91,114 @@ public sealed class DiceRollEndpointTests : IClassFixture<WebApplicationFactory<
         Assert.All(payload.Data, x => Assert.Equal(userId, x.UserId));
 
         var currentYear = DateTime.UtcNow.Year;
-        var monthYear = $"{DateTime.UtcNow.Month:D2}/{currentYear}";
-        var day = DateTime.UtcNow.Day.ToString();
+        var currentMonth = DateTime.UtcNow.Month;
+        var currentDay = DateTime.UtcNow.Day;
 
         var yearResponse = await client.GetAsync($"/api/dice/history?year={currentYear}");
         var yearPayload = await yearResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
         Assert.NotNull(yearPayload);
         Assert.Equal(2, yearPayload!.Data.Count);
 
-        var monthYearResponse = await client.GetAsync($"/api/dice/history?monthYear={Uri.EscapeDataString(monthYear)}");
-        var monthYearPayload = await monthYearResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
-        Assert.NotNull(monthYearPayload);
-        Assert.Equal(2, monthYearPayload!.Data.Count);
+        var monthResponse = await client.GetAsync($"/api/dice/history?year={currentYear}&month={currentMonth}");
+        var monthPayload = await monthResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        Assert.NotNull(monthPayload);
+        Assert.Equal(2, monthPayload!.Data.Count);
 
-        var dayResponse = await client.GetAsync($"/api/dice/history?day={Uri.EscapeDataString(day)}");
+        var dayResponse = await client.GetAsync($"/api/dice/history?year={currentYear}&month={currentMonth}&day={currentDay}");
         var dayPayload = await dayResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
         Assert.NotNull(dayPayload);
         Assert.Equal(2, dayPayload!.Data.Count);
+    }
+
+    [Fact]
+    public async Task OpenApiDocument_DescribesDiceHistorySortQueryValuesAndPrecedence()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var parameters = document.RootElement
+            .GetProperty("paths")
+            .GetProperty("/api/dice/history")
+            .GetProperty("get")
+            .GetProperty("parameters");
+
+        AssertQueryParameterDescription(parameters, "dateSort", "Accepted values: asc or desc.");
+        AssertQueryParameterDescription(parameters, "dateSort", "sum is sorted first and date/time breaks ties.");
+        AssertQueryParameterDescription(parameters, "sumSort", "Accepted values: asc or desc.");
+        AssertQueryParameterDescription(parameters, "sumSort", "sum is sorted first and date/time second.");
+    }
+
+    [Fact]
+    public async Task GetDiceHistory_WithCombinedSorts_UsesDiceSumFirstThenDateAsSecondaryKey()
+    {
+        using var client = _factory.CreateClient();
+        var userId = Guid.NewGuid();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(userId));
+
+        DiceRoll oldestSameSum;
+        DiceRoll newestSameSum;
+        DiceRoll highValue;
+        DiceRoll lowValue;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<OperativeDbContext>();
+            oldestSameSum = new DiceRoll(userId, 3, 4);
+            newestSameSum = new DiceRoll(userId, 2, 5);
+            highValue = new DiceRoll(userId, 5, 4);
+            lowValue = new DiceRoll(userId, 1, 1);
+
+            SetCreatedAtUtc(oldestSameSum, DateTime.UtcNow.AddMinutes(-30));
+            SetCreatedAtUtc(newestSameSum, DateTime.UtcNow.AddMinutes(-10));
+            SetCreatedAtUtc(highValue, DateTime.UtcNow.AddMinutes(-20));
+            SetCreatedAtUtc(lowValue, DateTime.UtcNow.AddMinutes(-40));
+
+            dbContext.DiceRolls.AddRange(oldestSameSum, newestSameSum, highValue, lowValue);
+            await dbContext.SaveChangesAsync();
+        }
+
+        async Task<Guid[]> GetHistoryIds(string sortingQuery)
+        {
+            var response = await client.GetAsync($"/api/dice/history?{sortingQuery}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var payload = await response.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+            Assert.NotNull(payload);
+            Assert.Equal(4, payload!.Data.Count);
+            return payload.Data.Select(roll => roll.Id).ToArray();
+        }
+
+        Assert.Equal(
+            new[] { highValue.Id, oldestSameSum.Id, newestSameSum.Id, lowValue.Id },
+            await GetHistoryIds("dateSort=asc&sumSort=desc"));
+        Assert.Equal(
+            new[] { lowValue.Id, newestSameSum.Id, oldestSameSum.Id, highValue.Id },
+            await GetHistoryIds("sumSort=asc"));
+        Assert.Equal(
+            new[] { lowValue.Id, oldestSameSum.Id, highValue.Id, newestSameSum.Id },
+            await GetHistoryIds("dateSort=asc"));
+        Assert.Equal(
+            new[] { newestSameSum.Id, highValue.Id, oldestSameSum.Id, lowValue.Id },
+            await GetHistoryIds("dateSort=desc"));
+        Assert.Equal(
+            new[] { lowValue.Id, newestSameSum.Id, oldestSameSum.Id, highValue.Id },
+            await GetHistoryIds("sumSort=asc&dateSort=desc"));
+    }
+
+    private static void SetCreatedAtUtc(DiceRoll roll, DateTime createdAtUtc)
+    {
+        var property = typeof(DiceRoll).GetProperty(nameof(DiceRoll.CreatedAtUtc));
+        Assert.NotNull(property);
+        property!.SetValue(roll, createdAtUtc);
+    }
+
+    private static void AssertQueryParameterDescription(JsonElement parameters, string name, string expectedDescription)
+    {
+        var parameter = Assert.Single(parameters.EnumerateArray(), item => item.GetProperty("name").GetString() == name);
+        Assert.Equal("query", parameter.GetProperty("in").GetString());
+        Assert.Contains(expectedDescription, parameter.GetProperty("description").GetString());
     }
 
     private static string CreateToken(Guid userId)

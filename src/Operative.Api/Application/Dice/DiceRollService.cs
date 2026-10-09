@@ -22,9 +22,9 @@ public sealed class DiceRollService(IDiceRollRepository diceRollRepository)
             diceRoll.CreatedAtUtc);
     }
 
-    public async Task<IReadOnlyList<DiceRollResponse>> GetHistoryAsync(Guid userId, DiceHistoryFilter? filter, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<DiceRollResponse>> GetHistoryAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, CancellationToken cancellationToken)
     {
-        var history = await diceRollRepository.GetByUserAsync(userId, filter, cancellationToken);
+        var history = await diceRollRepository.GetByUserAsync(userId, filter, sort, cancellationToken);
 
         return history
             .Select(x => new DiceRollResponse(

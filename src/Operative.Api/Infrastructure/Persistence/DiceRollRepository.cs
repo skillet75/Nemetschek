@@ -12,7 +12,7 @@ internal sealed class DiceRollRepository(OperativeDbContext dbContext) : IDiceRo
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<DiceRoll>> GetByUserAsync(Guid userId, DiceHistoryFilter? filter, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<DiceRoll>> GetByUserAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, CancellationToken cancellationToken)
     {
         var query = dbContext.DiceRolls
             .AsNoTracking()
@@ -36,8 +36,38 @@ internal sealed class DiceRollRepository(OperativeDbContext dbContext) : IDiceRo
             }
         }
 
-        return await query
-            .OrderByDescending(x => x.CreatedAtUtc)
+        if (sort is null)
+        {
+            return await query
+                .OrderByDescending(x => x.CreatedAtUtc)
+                .ThenBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        if (sort.SumDirection is not null)
+        {
+            var orderedBySum = sort.SumDirection == DiceSortDirection.Descending
+                ? query.OrderByDescending(x => x.Sum)
+                : query.OrderBy(x => x.Sum);
+
+            var orderedQuery = sort.DateDirection switch
+            {
+                DiceSortDirection.Ascending => orderedBySum.ThenBy(x => x.CreatedAtUtc),
+                DiceSortDirection.Descending => orderedBySum.ThenByDescending(x => x.CreatedAtUtc),
+                _ => orderedBySum.ThenByDescending(x => x.CreatedAtUtc),
+            };
+
+            return await orderedQuery
+                .ThenBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        var orderedByDate = sort.DateDirection == DiceSortDirection.Ascending
+            ? query.OrderBy(x => x.CreatedAtUtc)
+            : query.OrderByDescending(x => x.CreatedAtUtc);
+
+        return await orderedByDate
+            .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
     }
 }
