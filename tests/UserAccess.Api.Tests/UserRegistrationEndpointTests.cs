@@ -50,6 +50,7 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiF
         var response = await client.PostAsJsonAsync("/api/users", request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Null(response.Headers.Location);
 
         var payload = await response.Content.ReadFromJsonAsync<ApiResponse<UserResponse>>();
         Assert.NotNull(payload);
@@ -57,24 +58,6 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiF
         Assert.Equal(request.Email, payload.Data.Email);
         Assert.Equal(request.Image, payload.Data.Image);
         Assert.False((await response.Content.ReadAsStringAsync()).Contains("password", StringComparison.OrdinalIgnoreCase));
-
-        var getResponse = await client.GetAsync($"/api/users/{payload.Data.Id}");
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserResponse>();
-        Assert.NotNull(fetchedUser);
-        Assert.Equal(payload.Data.Id, fetchedUser!.Id);
-        Assert.Equal(request.Email, fetchedUser.Email);
-        Assert.Equal(request.Image, fetchedUser.Image);
-    }
-
-    [Fact]
-    public async Task GetUsers_WithUnknownId_ReturnsNotFound()
-    {
-        using var client = _factory.CreateClient();
-
-        var response = await client.GetAsync($"/api/users/{Guid.NewGuid()}");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

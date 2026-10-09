@@ -64,28 +64,7 @@ public sealed class UsersController : ControllerBase
             ToImageDataUri(user),
             user.CreatedAtUtc);
 
-        return CreatedAtAction(nameof(GetById), new { id = user.Id }, ApiResponse<UserResponse>.Ok(response, "User created successfully."));
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<UserResponse>> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        var user = await _dbContext.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
-
-        if (user is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(new UserResponse(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Email,
-            ToImageDataUri(user),
-            user.CreatedAtUtc));
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<UserResponse>.Ok(response, "User created successfully."));
     }
 
     private static string? ToImageDataUri(User user) => user.ImageData is null || user.ImageContentType is null
