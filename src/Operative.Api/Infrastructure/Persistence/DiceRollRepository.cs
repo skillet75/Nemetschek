@@ -12,7 +12,7 @@ internal sealed class DiceRollRepository(OperativeDbContext dbContext) : IDiceRo
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<DiceRoll>> GetByUserAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, CancellationToken cancellationToken)
+    public async Task<(IReadOnlyList<DiceRoll> Items, int TotalCount)> GetByUserAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, int page, int pageSize, CancellationToken cancellationToken)
     {
         var query = dbContext.DiceRolls
             .AsNoTracking()
@@ -36,38 +36,39 @@ internal sealed class DiceRollRepository(OperativeDbContext dbContext) : IDiceRo
             }
         }
 
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        IOrderedQueryable<DiceRoll> orderedQuery;
         if (sort is null)
         {
-            return await query
+            orderedQuery = query
                 .OrderByDescending(x => x.CreatedAtUtc)
-                .ThenBy(x => x.Id)
-                .ToListAsync(cancellationToken);
+                .ThenBy(x => x.Id);
         }
-
-        if (sort.SumDirection is not null)
+        else if (sort.SumDirection is not null)
         {
             var orderedBySum = sort.SumDirection == DiceSortDirection.Descending
                 ? query.OrderByDescending(x => x.Sum)
                 : query.OrderBy(x => x.Sum);
 
-            var orderedQuery = sort.DateDirection switch
+            var orderedBySumAndDate = sort.DateDirection switch
             {
                 DiceSortDirection.Ascending => orderedBySum.ThenBy(x => x.CreatedAtUtc),
                 DiceSortDirection.Descending => orderedBySum.ThenByDescending(x => x.CreatedAtUtc),
                 _ => orderedBySum.ThenByDescending(x => x.CreatedAtUtc),
             };
 
-            return await orderedQuery
-                .ThenBy(x => x.Id)
-                .ToListAsync(cancellationToken);
+            orderedQuery = orderedBySumAndDate.ThenBy(x => x.Id);
+        }
+        else
+        {
+            var orderedByDate = sort.DateDirection == DiceSortDirection.Ascending
+                ? query.OrderBy(x => x.CreatedAtUtc)
+                : query.OrderByDescending(x => x.CreatedAtUtc);
+            orderedQuery = orderedByDate.ThenBy(x => x.Id);
         }
 
-        var orderedByDate = sort.DateDirection == DiceSortDirection.Ascending
-            ? query.OrderBy(x => x.CreatedAtUtc)
-            : query.OrderByDescending(x => x.CreatedAtUtc);
-
-        return await orderedByDate
-            .ThenBy(x => x.Id)
-            .ToListAsync(cancellationToken);
+        var items = await orderedQuery.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return (items, totalCount);
     }
 }

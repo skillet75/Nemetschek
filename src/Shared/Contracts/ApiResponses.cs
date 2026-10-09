@@ -36,3 +36,10 @@ public sealed record DiceRollResponse(
     int Die2,
     int Sum,
     DateTime CreatedAtUtc);
+
+public sealed record PagedResponse<T>(
+    IReadOnlyList<T> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);

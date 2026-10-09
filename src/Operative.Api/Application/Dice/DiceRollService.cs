@@ -22,11 +22,11 @@ public sealed class DiceRollService(IDiceRollRepository diceRollRepository)
             diceRoll.CreatedAtUtc);
     }
 
-    public async Task<IReadOnlyList<DiceRollResponse>> GetHistoryAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, CancellationToken cancellationToken)
+    public async Task<PagedResponse<DiceRollResponse>> GetHistoryAsync(Guid userId, DiceHistoryFilter? filter, DiceHistorySort? sort, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var history = await diceRollRepository.GetByUserAsync(userId, filter, sort, cancellationToken);
+        var (history, totalCount) = await diceRollRepository.GetByUserAsync(userId, filter, sort, page, pageSize, cancellationToken);
 
-        return history
+        var items = history
             .Select(x => new DiceRollResponse(
                 x.Id,
                 x.UserId,
@@ -35,5 +35,7 @@ public sealed class DiceRollService(IDiceRollRepository diceRollRepository)
                 x.Sum,
                 x.CreatedAtUtc))
             .ToList();
+        return new PagedResponse<DiceRollResponse>(items, page, pageSize, totalCount,
+            totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize));
     }
 }

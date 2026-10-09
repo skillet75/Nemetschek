@@ -85,29 +85,29 @@ public sealed class DiceRollEndpointTests : IClassFixture<WebApplicationFactory<
         var response = await client.GetAsync("/api/dice/history");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        var payload = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResponse<DiceRollResponse>>>();
         Assert.NotNull(payload);
-        Assert.Equal(2, payload!.Data.Count);
-        Assert.All(payload.Data, x => Assert.Equal(userId, x.UserId));
+        Assert.Equal(2, payload!.Data.Items.Count);
+        Assert.All(payload.Data.Items, x => Assert.Equal(userId, x.UserId));
 
         var currentYear = DateTime.UtcNow.Year;
         var currentMonth = DateTime.UtcNow.Month;
         var currentDay = DateTime.UtcNow.Day;
 
         var yearResponse = await client.GetAsync($"/api/dice/history?year={currentYear}");
-        var yearPayload = await yearResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        var yearPayload = await yearResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResponse<DiceRollResponse>>>();
         Assert.NotNull(yearPayload);
-        Assert.Equal(2, yearPayload!.Data.Count);
+        Assert.Equal(2, yearPayload!.Data.Items.Count);
 
         var monthResponse = await client.GetAsync($"/api/dice/history?year={currentYear}&month={currentMonth}");
-        var monthPayload = await monthResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        var monthPayload = await monthResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResponse<DiceRollResponse>>>();
         Assert.NotNull(monthPayload);
-        Assert.Equal(2, monthPayload!.Data.Count);
+        Assert.Equal(2, monthPayload!.Data.Items.Count);
 
         var dayResponse = await client.GetAsync($"/api/dice/history?year={currentYear}&month={currentMonth}&day={currentDay}");
-        var dayPayload = await dayResponse.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+        var dayPayload = await dayResponse.Content.ReadFromJsonAsync<ApiResponse<PagedResponse<DiceRollResponse>>>();
         Assert.NotNull(dayPayload);
-        Assert.Equal(2, dayPayload!.Data.Count);
+        Assert.Equal(2, dayPayload!.Data.Items.Count);
     }
 
     [Fact]
@@ -164,10 +164,10 @@ public sealed class DiceRollEndpointTests : IClassFixture<WebApplicationFactory<
         {
             var response = await client.GetAsync($"/api/dice/history?{sortingQuery}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var payload = await response.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<DiceRollResponse>>>();
+            var payload = await response.Content.ReadFromJsonAsync<ApiResponse<PagedResponse<DiceRollResponse>>>();
             Assert.NotNull(payload);
-            Assert.Equal(4, payload!.Data.Count);
-            return payload.Data.Select(roll => roll.Id).ToArray();
+            Assert.Equal(4, payload!.Data.Items.Count);
+            return payload.Data.Items.Select(roll => roll.Id).ToArray();
         }
 
         Assert.Equal(
