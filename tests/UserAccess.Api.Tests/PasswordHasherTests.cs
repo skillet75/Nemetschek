@@ -25,4 +25,17 @@ public sealed class PasswordHasherTests
 
         Assert.False(PasswordHasher.VerifyPassword("WrongPassword!", hash));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-hash")]
+    [InlineData("pbkdf2$abc$AA==$AA==")]
+    [InlineData("pbkdf2$200000$%%%$AA==")]
+    [InlineData("pbkdf2$200000$AA==$")]
+    [InlineData("pbkdf2$200000$AQ==$AQ==")]
+    [InlineData("pbkdf2$2000001$AAAAAAAAAAA=$AAAAAAAAAAAAAAAAAAAAAA==")]
+    public void VerifyPassword_ReturnsFalseForMalformedHash(string malformedHash)
+    {
+        Assert.False(PasswordHasher.VerifyPassword("P@ssw0rd!", malformedHash));
+    }
 }

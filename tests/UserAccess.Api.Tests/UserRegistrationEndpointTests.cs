@@ -2,18 +2,34 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Shared.Contracts;
+using UserAccess.Api.Infrastructure.Persistence;
 using Xunit;
 
 namespace UserAccess.Api.Tests;
 
-public sealed class UserRegistrationEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly UserAccessApiFactory _factory;
 
-    public UserRegistrationEndpointTests(WebApplicationFactory<Program> factory)
+    public UserRegistrationEndpointTests(UserAccessApiFactory factory)
     {
         _factory = factory;
+    }
+
+    [Fact]
+    public void TestHost_UsesItsIsolatedDatabaseAndSigningKey()
+    {
+        var configuration = _factory.Services.GetRequiredService<IConfiguration>();
+
+        Assert.Equal(_factory.ConnectionString, configuration.GetConnectionString("DefaultConnection"));
+        Assert.Equal("integration-test-jwt-signing-key-at-least-32-bytes", configuration["Jwt:Key"]);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+        Assert.Equal(_factory.DatabasePath, dbContext.Database.GetDbConnection().DataSource);
     }
 
     [Fact]
@@ -39,6 +55,24 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<WebApplication
         Assert.NotNull(payload);
         Assert.Equal("Ada", payload!.Data.FirstName);
         Assert.Equal(request.Email, payload.Data.Email);
+        Assert.False((await response.Content.ReadAsStringAsync()).Contains("password", StringComparison.OrdinalIgnoreCase));
+
+        var getResponse = await client.GetAsync($"/api/users/{payload.Data.Id}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var fetchedUser = await getResponse.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.NotNull(fetchedUser);
+        Assert.Equal(payload.Data.Id, fetchedUser!.Id);
+        Assert.Equal(request.Email, fetchedUser.Email);
+    }
+
+    [Fact]
+    public async Task GetUsers_WithUnknownId_ReturnsNotFound()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/users/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -148,6 +182,20 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<WebApplication
         };
 
         var response = await client.PostAsJsonAsync("/api/auth/token", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostAuthToken_WithUnknownEmail_ReturnsUnauthorized()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/token", new CreateTokenRequest
+        {
+            Email = $"missing-{Guid.NewGuid():N}@example.com",
+            Password = "Test123!"
+        });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

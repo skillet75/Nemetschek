@@ -32,7 +32,7 @@ public static class PasswordHasher
             return false;
         }
 
-        if (!int.TryParse(parts[1], out var iterations))
+        if (!int.TryParse(parts[1], out var iterations) || iterations is < 1 or > 2_000_000)
         {
             return false;
         }
@@ -41,11 +41,16 @@ public static class PasswordHasher
         {
             var salt = Convert.FromBase64String(parts[2]);
             var expectedHash = Convert.FromBase64String(parts[3]);
+            if (salt.Length < 8 || expectedHash.Length < 16)
+            {
+                return false;
+            }
+
             var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expectedHash.Length);
 
             return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
         }
-        catch (FormatException)
+        catch (Exception exception) when (exception is FormatException or ArgumentException)
         {
             return false;
         }
