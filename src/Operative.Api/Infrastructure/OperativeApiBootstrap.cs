@@ -2,7 +2,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -60,17 +59,9 @@ public static class OperativeApiBootstrap
                 return Task.CompletedTask;
             });
         });
-        builder.Services.AddProblemDetails(options =>
-        {
-            options.CustomizeProblemDetails = context =>
-            {
-                context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
-                context.ProblemDetails.Extensions["service"] = "Operative.Api";
-            };
-        });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddControllers();
+        builder.Services.AddControllers().AddApiErrorHandling("Operative.Api");
         var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
         if (string.IsNullOrWhiteSpace(jwtSettings.Issuer) ||
@@ -119,37 +110,7 @@ public static class OperativeApiBootstrap
             dbContext.Database.Migrate();
         }
 
-        app.UseExceptionHandler(exceptionHandlerApp =>
-        {
-            exceptionHandlerApp.Run(async context =>
-            {
-                var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error ??
-                    new ApiException("An unexpected error occurred.", 500);
-
-                var statusCode = exception is ApiException apiException
-                    ? apiException.StatusCode
-                    : 500;
-
-                context.Response.StatusCode = statusCode;
-                context.Response.ContentType = "application/json";
-
-                var response = ErrorResponse.FromException(exception, statusCode, context.TraceIdentifier);
-                await context.Response.WriteAsJsonAsync(response);
-            });
-        });
-
-        app.UseStatusCodePages(async statusCodeContext =>
-        {
-            if (statusCodeContext.HttpContext.Response.HasStarted)
-            {
-                return;
-            }
-
-            statusCodeContext.HttpContext.Response.ContentType = "application/json";
-            var statusCode = statusCodeContext.HttpContext.Response.StatusCode;
-            await statusCodeContext.HttpContext.Response.WriteAsJsonAsync(
-                new ErrorResponse("The request could not be processed.", statusCode, statusCodeContext.HttpContext.TraceIdentifier));
-        });
+        app.UseApiErrorHandling();
 
         app.UseAuthentication();
         app.UseAuthorization();

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Shared.Contracts;
 using Xunit;
@@ -38,6 +39,33 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<WebApplication
         Assert.NotNull(payload);
         Assert.Equal("Ada", payload!.Data.FirstName);
         Assert.Equal(request.Email, payload.Data.Email);
+    }
+
+    [Fact]
+    public async Task PostUsers_WithInvalidPayload_ReturnsStructuredValidationProblem()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/users", new CreateUserRequest
+        {
+            FirstName = "",
+            LastName = "Lovelace",
+            Email = "not-an-email",
+            Password = "short"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var problem = document.RootElement;
+        Assert.Equal(400, problem.GetProperty("status").GetInt32());
+        Assert.Equal("One or more validation errors occurred.", problem.GetProperty("title").GetString());
+        Assert.Equal("UserAccess.Api", problem.GetProperty("service").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        var errors = problem.GetProperty("errors");
+        Assert.Contains("FirstName", errors.EnumerateObject().Select(error => error.Name));
+        Assert.Contains("Email", errors.EnumerateObject().Select(error => error.Name));
+        Assert.Contains("Password", errors.EnumerateObject().Select(error => error.Name));
     }
 
     [Fact]

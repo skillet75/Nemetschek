@@ -24,7 +24,7 @@ public sealed class DiceController : ControllerBase
 
     [HttpPost("roll")]
     [ProducesResponseType(typeof(ApiResponse<DiceRollResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<DiceRollResponse>>> RollAsync(CancellationToken cancellationToken)
     {
         var response = await _diceRollService.RollAsync(_currentUser.UserId, cancellationToken);
@@ -34,8 +34,8 @@ public sealed class DiceController : ControllerBase
 
     [HttpGet("history")]
     [ProducesResponseType(typeof(ApiResponse<PagedResponse<DiceRollResponse>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<PagedResponse<DiceRollResponse>>>> GetHistoryAsync(
         [FromQuery, Description("Optional year filter from 1 through 9999.")] int? year,
         [FromQuery, Description("Optional month filter from 1 through 12. Requires year.")] int? month,

@@ -111,6 +111,25 @@ public sealed class DiceRollEndpointTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
+    public async Task GetDiceHistory_WithInvalidSort_ReturnsStructuredProblemDetails()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(Guid.NewGuid()));
+
+        var response = await client.GetAsync("/api/dice/history?dateSort=sideways");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var problem = document.RootElement;
+        Assert.Equal(400, problem.GetProperty("status").GetInt32());
+        Assert.Equal("Bad Request", problem.GetProperty("title").GetString());
+        Assert.Contains("dateSort must be 'asc' or 'desc'", problem.GetProperty("detail").GetString());
+        Assert.Equal("Operative.Api", problem.GetProperty("service").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+    }
+
+    [Fact]
     public async Task OpenApiDocument_DescribesDiceHistorySortQueryValuesAndPrecedence()
     {
         using var client = _factory.CreateClient();

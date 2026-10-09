@@ -12,21 +12,21 @@ public sealed class JwtSettings
 
 public sealed record CreateUserRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
+    [Required(ErrorMessage = "First name is required.")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "First name must be between 2 and 100 characters.")]
     public string FirstName { get; init; } = string.Empty;
 
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
+    [Required(ErrorMessage = "Last name is required.")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Last name must be between 2 and 100 characters.")]
     public string LastName { get; init; } = string.Empty;
 
-    [Required]
-    [EmailAddress]
-    [StringLength(254)]
+    [Required(ErrorMessage = "Email is required.")]
+    [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+    [StringLength(254, ErrorMessage = "Email cannot exceed 254 characters.")]
     public string Email { get; init; } = string.Empty;
 
-    [Required]
-    [StringLength(128, MinimumLength = 8)]
+    [Required(ErrorMessage = "Password is required.")]
+    [StringLength(128, MinimumLength = 8, ErrorMessage = "Password must be between 8 and 128 characters.")]
     [RegularExpression(
         @"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$",
         ErrorMessage = "Password must contain at least one letter, one number, and one special character.")]
@@ -38,13 +38,13 @@ public sealed record CreateUserRequest
 
 public record CreateTokenRequest
 {
-    [Required]
-    [EmailAddress]
-    [StringLength(254)]
+    [Required(ErrorMessage = "Email is required.")]
+    [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+    [StringLength(254, ErrorMessage = "Email cannot exceed 254 characters.")]
     public string Email { get; init; } = string.Empty;
 
-    [Required]
-    [StringLength(128, MinimumLength = 8)]
+    [Required(ErrorMessage = "Password is required.")]
+    [StringLength(128, MinimumLength = 8, ErrorMessage = "Password must be between 8 and 128 characters.")]
     public string Password { get; init; } = string.Empty;
 }
 

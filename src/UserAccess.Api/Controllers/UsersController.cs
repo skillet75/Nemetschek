@@ -21,14 +21,9 @@ public sealed class UsersController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<UserResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<UserResponse>>> Post([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
-        {
-            return ValidationProblem(ModelState);
-        }
-
         var normalizedEmail = request.Email.Trim();
         var existingUser = await _dbContext.Users
             .AsNoTracking()
@@ -36,7 +31,11 @@ public sealed class UsersController : ControllerBase
 
         if (existingUser is not null)
         {
-            return Conflict(new ErrorResponse("A user with this email already exists.", StatusCodes.Status409Conflict, HttpContext.TraceIdentifier));
+            return Problem(
+                detail: "A user with this email already exists.",
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Conflict",
+                type: "about:blank");
         }
 
         var user = new User(
