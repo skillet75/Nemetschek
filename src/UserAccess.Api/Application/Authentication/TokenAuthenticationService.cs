@@ -5,7 +5,6 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Shared.Contracts;
-using UserAccess.Api.Infrastructure;
 
 namespace UserAccess.Api.Application.Authentication;
 
@@ -13,12 +12,15 @@ public sealed class TokenAuthenticationService
 {
     private readonly IUserRepository _userRepository;
     private readonly JwtSettings _jwtSettings;
+    private readonly IPasswordHasher _passwordHasher;
 
     public TokenAuthenticationService(
         IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
         IOptions<JwtSettings> jwtSettings)
     {
         _userRepository = userRepository;
+        _passwordHasher = passwordHasher;
         _jwtSettings = jwtSettings.Value;
     }
 
@@ -27,7 +29,7 @@ public sealed class TokenAuthenticationService
         CancellationToken cancellationToken)
     {
         var user = await _userRepository.FindByEmailAsync(request.Email.Trim(), cancellationToken);
-        if (user is null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
             return null;
         }

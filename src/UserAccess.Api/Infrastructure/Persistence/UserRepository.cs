@@ -10,4 +10,13 @@ internal sealed class UserRepository(UserDbContext dbContext) : IUserRepository
         dbContext.Users
             .AsNoTracking()
             .SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
+
+    public Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken) =>
+        dbContext.Users.AnyAsync(user => user.Email == email, cancellationToken);
+
+    public async Task AddAsync(User user, CancellationToken cancellationToken)
+    {
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

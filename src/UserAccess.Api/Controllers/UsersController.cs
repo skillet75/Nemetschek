@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Shared.Contracts;
-using UserAccess.Api.Domain.Entities;
-using UserAccess.Api.Infrastructure;
-using UserAccess.Api.Infrastructure.Persistence;
+using UserAccess.Api.Application.Registration;
 
 namespace UserAccess.Api.Controllers;
 
@@ -11,11 +8,11 @@ namespace UserAccess.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class UsersController : ControllerBase
 {
-    private readonly UserDbContext _dbContext;
+    private readonly UserRegistrationService _registrationService;
 
-    public UsersController(UserDbContext dbContext)
+    public UsersController(UserRegistrationService registrationService)
     {
-        _dbContext = dbContext;
+        _registrationService = registrationService;
     }
 
     [HttpPost]
@@ -24,12 +21,8 @@ public sealed class UsersController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<UserResponse>>> Post([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = request.Email.Trim();
-        var existingUser = await _dbContext.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
-
-        if (existingUser is not null)
+        var response = await _registrationService.RegisterAsync(request, cancellationToken);
+        if (response is null)
         {
             return Problem(
                 detail: "A user with this email already exists.",
@@ -38,36 +31,6 @@ public sealed class UsersController : ControllerBase
                 type: "about:blank");
         }
 
-        if (!ImageDataUri.TryParse(request.Image, out var image))
-        {
-            ModelState.AddModelError(nameof(request.Image),
-                $"Image must be a valid PNG, JPEG, or WebP data URI no larger than {ImageDataUri.SizeLimitDescription} when decoded.");
-            return ValidationProblem(ModelState);
-        }
-
-        var user = new User(
-            request.FirstName.Trim(),
-            request.LastName.Trim(),
-            normalizedEmail,
-            PasswordHasher.HashPassword(request.Password),
-            image?.Data,
-            image?.MediaType);
-
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var response = new UserResponse(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Email,
-            ToImageDataUri(user),
-            user.CreatedAtUtc);
-
         return StatusCode(StatusCodes.Status201Created, ApiResponse<UserResponse>.Ok(response, "User created successfully."));
     }
-
-    private static string? ToImageDataUri(User user) => user.ImageData is null || user.ImageContentType is null
-        ? null
-        : $"data:{user.ImageContentType};base64,{Convert.ToBase64String(user.ImageData)}";
 }

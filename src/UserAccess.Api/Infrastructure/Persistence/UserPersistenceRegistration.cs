@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UserAccess.Api.Application.Authentication;
+using UserAccess.Api.Application.Registration;
 
 namespace UserAccess.Api.Infrastructure.Persistence;
 
@@ -30,6 +31,8 @@ public static class UserPersistenceRegistration
 
         services.AddDbContext<UserDbContext>(options => options.UseSqlite(sqliteConnection.ToString()));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
+        services.AddScoped<UserRegistrationService>();
         return services;
     }
 }
