@@ -38,12 +38,20 @@ public sealed class UsersController : ControllerBase
                 type: "about:blank");
         }
 
+        if (!ImageDataUri.TryParse(request.Image, out var image))
+        {
+            ModelState.AddModelError(nameof(request.Image),
+                $"Image must be a valid PNG, JPEG, or WebP data URI no larger than {ImageDataUri.SizeLimitDescription} when decoded.");
+            return ValidationProblem(ModelState);
+        }
+
         var user = new User(
             request.FirstName.Trim(),
             request.LastName.Trim(),
             normalizedEmail,
             PasswordHasher.HashPassword(request.Password),
-            string.IsNullOrWhiteSpace(request.Image) ? null : request.Image.Trim());
+            image?.Data,
+            image?.MediaType);
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -53,7 +61,7 @@ public sealed class UsersController : ControllerBase
             user.FirstName,
             user.LastName,
             user.Email,
-            user.ImagePath,
+            ToImageDataUri(user),
             user.CreatedAtUtc);
 
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, ApiResponse<UserResponse>.Ok(response, "User created successfully."));
@@ -76,7 +84,11 @@ public sealed class UsersController : ControllerBase
             user.FirstName,
             user.LastName,
             user.Email,
-            user.ImagePath,
+            ToImageDataUri(user),
             user.CreatedAtUtc));
     }
+
+    private static string? ToImageDataUri(User user) => user.ImageData is null || user.ImageContentType is null
+        ? null
+        : $"data:{user.ImageContentType};base64,{Convert.ToBase64String(user.ImageData)}";
 }

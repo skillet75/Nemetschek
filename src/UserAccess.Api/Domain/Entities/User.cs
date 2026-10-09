@@ -6,14 +6,15 @@ public sealed class User
     {
     }
 
-    public User(string firstName, string lastName, string email, string passwordHash, string? imagePath = null)
+    public User(string firstName, string lastName, string email, string passwordHash, byte[]? imageData = null, string? imageContentType = null)
     {
         Id = Guid.NewGuid();
         FirstName = firstName;
         LastName = lastName;
         Email = email;
         PasswordHash = passwordHash;
-        ImagePath = imagePath;
+        ImageData = imageData;
+        ImageContentType = imageContentType;
         CreatedAtUtc = DateTime.UtcNow;
     }
 
@@ -22,6 +23,7 @@ public sealed class User
     public string LastName { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
-    public string? ImagePath { get; private set; }
+    public byte[]? ImageData { get; private set; }
+    public string? ImageContentType { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 }

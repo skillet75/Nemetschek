@@ -21,6 +21,23 @@ dotnet test MicroservicesDemo.sln
 
 Integration tests use a unique SQLite file in the operating system temporary directory for each test fixture. The fixture deletes the database and SQLite sidecar files when disposed, so test-created users and dice rolls do not accumulate in the demo databases under the service projects.
 
+## EF Core migrations
+
+The repository pins the EF Core CLI to the same `10.0.12` version as the EF Core packages. Restore the local tool once after cloning (or after changing the tool manifest):
+
+```sh
+dotnet tool restore
+```
+
+Check whether either service's EF model has changes that need a migration:
+
+```sh
+dotnet tool run dotnet-ef -- migrations has-pending-model-changes --project src/UserAccess.Api/UserAccess.Api.csproj
+dotnet tool run dotnet-ef -- migrations has-pending-model-changes --project src/Operative.Api/Operative.Api.csproj
+```
+
+Both commands should report that no changes have been made to the model since the last migration. To add a migration, run `dotnet tool run dotnet-ef -- migrations add <MigrationName> --project <service-project>` from the repository root.
+
 ## Run locally
 
 Run each service in a separate terminal from the repository root:
@@ -69,7 +86,7 @@ Most successful endpoints wrap data in `{ "data": ..., "message": ... }`. `GET /
 
 | Method and path | Auth | Behavior |
 | --- | --- | --- |
-| `POST /api/users` | None | Creates a user. Body: `firstName`, `lastName`, `email`, `password`, optional `image`. Returns `201` with user id, names, email, image, and creation time. Password is PBKDF2-SHA256 hashed. Duplicate email returns `409`; invalid input returns `400`. |
+| `POST /api/users` | None | Creates a user. Body: `firstName`, `lastName`, `email`, `password`, and optional `image`. When present, `image` must be a PNG, JPEG, or WebP data URI (`data:image/<type>;base64,...`) whose decoded image is no larger than 5 MiB and whose bytes start with the matching image file signature. The API stores decoded bytes as a SQLite BLOB with its media type and returns the image as a data URI. Returns `201` with user id, names, email, image, and creation time. Password is PBKDF2-SHA256 hashed. Duplicate email returns `409`; invalid input returns `400`. |
 | `GET /api/users/{id}` | None | Returns a user by GUID, or `404`. |
 | `POST /api/auth/token` | None | Body: `email`, `password`. Returns `200` with `accessToken`, `tokenType` (`Bearer`), and `expiresAtUtc`; bad credentials return `401`. |
 | `GET /health` | None | Health check. |

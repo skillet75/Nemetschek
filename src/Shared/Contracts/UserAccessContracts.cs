@@ -32,7 +32,7 @@ public sealed record CreateUserRequest
         ErrorMessage = "Password must contain at least one letter, one number, and one special character.")]
     public string Password { get; init; } = string.Empty;
 
-    [StringLength(2048)]
+    [ImageDataUri]
     public string? Image { get; init; }
 }
 

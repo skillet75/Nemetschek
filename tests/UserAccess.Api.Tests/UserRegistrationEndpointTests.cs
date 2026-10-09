@@ -44,7 +44,7 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiF
             LastName = "Lovelace",
             Email = email,
             Password = "Test123!",
-            Image = "data:image/png;base64,abc123"
+            Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/xioAAAAASUVORK5CYII="
         };
 
         var response = await client.PostAsJsonAsync("/api/users", request);
@@ -55,6 +55,7 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiF
         Assert.NotNull(payload);
         Assert.Equal("Ada", payload!.Data.FirstName);
         Assert.Equal(request.Email, payload.Data.Email);
+        Assert.Equal(request.Image, payload.Data.Image);
         Assert.False((await response.Content.ReadAsStringAsync()).Contains("password", StringComparison.OrdinalIgnoreCase));
 
         var getResponse = await client.GetAsync($"/api/users/{payload.Data.Id}");
@@ -63,6 +64,7 @@ public sealed class UserRegistrationEndpointTests : IClassFixture<UserAccessApiF
         Assert.NotNull(fetchedUser);
         Assert.Equal(payload.Data.Id, fetchedUser!.Id);
         Assert.Equal(request.Email, fetchedUser.Email);
+        Assert.Equal(request.Image, fetchedUser.Image);
     }
 
     [Fact]

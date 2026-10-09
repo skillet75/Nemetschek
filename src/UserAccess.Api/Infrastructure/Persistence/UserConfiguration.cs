@@ -41,8 +41,10 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(512)
             .IsRequired();
 
-        builder.Property(user => user.ImagePath)
-            .HasMaxLength(2048);
+        builder.Property(user => user.ImageData);
+
+        builder.Property(user => user.ImageContentType)
+            .HasMaxLength(32);
 
         builder.Property(user => user.CreatedAtUtc)
             .IsRequired();

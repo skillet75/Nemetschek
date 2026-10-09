@@ -37,9 +37,12 @@ namespace UserAccess.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ImagePath")
-                        .HasMaxLength(2048)
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("ImageData")
+                        .HasColumnType("BLOB");
 
                     b.Property<string>("LastName")
                         .IsRequired()
