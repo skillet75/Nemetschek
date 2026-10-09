@@ -3,68 +3,69 @@
 ## Task 1 — Solution skeleton
 Status: Complete
 
-### Deliverables
-- `MicroservicesDemo.sln`
-- `src/UserAccess.Api/UserAccess.Api.csproj`
-- `src/Operative.Api/Operative.Api.csproj`
-- `src/Shared/Shared.csproj`
-- Shared response contracts
-- API bootstrap classes
-
-### Verification
-- Solution built successfully using `dotnet build MicroservicesDemo.sln -nologo`.
-- Result: build succeeded in 4.3s.
+The solution contains the `UserAccess.Api`, `Operative.Api`, and `Shared` projects with service-specific bootstraps and shared response contracts.
 
 ## Task 2 — Shared baseline and configuration
 Status: Complete
 
+Both APIs configure logging, health and info endpoints, OpenAPI in Development, and shared Problem Details behavior. Database connections and JWT settings are configurable through app settings and environment variables.
+
 ## Task 3 — EF Core SQLite data model
 Status: Complete
 
-### Deliverables
-- Service-owned `UserDbContext` and `OperativeDbContext`, entities, and EF Core mappings.
-- Separate SQLite files under each API's `App_Data` directory.
-- Independent initial migrations and model snapshots for both services.
-- Database constraints for case-insensitive unique user email, basic email shape, valid dice values, and correct dice sums.
+Each service owns its entities, EF Core context, mappings, SQLite database path, and migration history. The user email is case-insensitively unique. Dice constraints enforce valid face values and sums. Each service applies its migrations at startup.
 
-### Verification
-- `dotnet build MicroservicesDemo.sln -nologo` succeeded.
-- Both initial migrations were applied successfully to their respective SQLite files.
-- `dotnet ef migrations has-pending-model-changes` reported no model changes for either service.
-- `git diff --check` passed; service-local SQLite files are ignored by Git.
-
-## Task 4 — user creation endpoint
+## Task 4 — User registration
 Status: Complete
 
-### Deliverables
-- `POST /api/users` registration flow
-- request DTO validation and duplicate email checks
-- password hashing with PBKDF2
-- user response contract
+`POST /api/users` validates input, optionally accepts supported image data, hashes passwords, rejects duplicate email with `409`, and returns the created user. The repository maps only the SQLite unique violation for `Users.Email` to the duplicate result so concurrent registrations receive the same conflict response.
 
-### Verification
-- `dotnet test .\tests\UserAccess.Api.Tests\UserAccess.Api.Tests.csproj -nologo` passed.
-
-## Task 5 — token creation endpoint
+## Task 5 — Token creation
 Status: Complete
 
-### Deliverables
-- `POST /api/auth/token`
-- `CreateTokenRequest` validation for email/password
-- password verification against stored hash
-- JWT creation using configured issuer, audience, expiration, and signing key
-- `AuthTokenResponse` payload with access token and expiry metadata
+`POST /api/auth/token` validates credentials, verifies the stored PBKDF2-SHA256 hash, and issues a configured JWT. Invalid credentials return `401`.
 
-### Verification
-- `dotnet test .\tests\UserAccess.Api.Tests\UserAccess.Api.Tests.csproj -nologo` passed.
+## Task 6 — JWT authentication in Operative.Api
+Status: Complete
 
-## Remaining tasks
+Operative validates issuer, audience, signing key, lifetime, and algorithm. Dice endpoints require bearer authentication; `GET /api/me` returns the authenticated subject identifier.
 
-1. Task 6: JWT auth in operative service
-2. Task 7: dice roll endpoint
-3. Task 8: history query with filters
-4. Task 9: sorting and precedence
-5. Task 10: pagination
-6. Task 11: centralized error handling and validation
-7. Task 12: tests
-8. Task 13: deployment-ready docs and configuration
+## Task 7 — Dice roll endpoint
+Status: Complete
+
+`POST /api/dice/roll` generates and persists a two-die roll for the authenticated user.
+
+## Task 8 — History filters
+Status: Complete
+
+`GET /api/dice/history` scopes results to the authenticated user and supports year, month/year, and complete calendar-day filters. Unknown and repeated query parameters are rejected.
+
+## Task 9 — History sorting
+Status: Complete
+
+History supports ascending and descending date and sum sorting, deterministic ID tie ordering, and sum-first precedence when both sort fields are set.
+
+## Task 10 — History pagination
+Status: Complete
+
+History uses bounded page and page-size values, database-side pagination, and total count/page metadata.
+
+## Task 11 — Error handling and validation
+Status: Complete
+
+Both APIs use shared Problem Details handling, structured validation responses, trace IDs, generic unexpected-error details, and safe application 4xx errors.
+
+## Task 12 — Tests
+Status: Complete
+
+UserAccess tests cover registration, validation, duplicate email, image data, hashing, and authentication. Operative tests cover authorization, rolling, user scoping, filters, sorting, pagination, and OpenAPI metadata. Tests were not run as part of this review-resolution change.
+
+## Task 13 — Run documentation and configuration
+Status: Complete
+
+`README.md` documents requirements, build/test/run commands, configuration, migrations, API contracts, and examples. `design.md` records service boundaries and startup migration behavior.
+
+## Verification for this review update
+
+- `dotnet build MicroservicesDemo.sln --no-restore` succeeded with zero warnings and errors after the review-resolution changes.
+- `git diff --check` passed. Tests were not run as part of this update.

@@ -1,24 +1,24 @@
 # .NET 10 Microservices Implementation Plan
 
-## Source requirements
+## Source requirements and design choices
 
-This plan is based on the task description in the repository and the PDF version of the same brief. The solution should be a .NET Core 10 Web API implementation with two microservices:
+This plan translates the original task in `task.txt` into implementation steps. The brief requires two ASP.NET Core 10 microservices, but it does not specify endpoint paths, HTTP verbs, database technology, or authentication format. The routes and technologies below are proposed RESTful design choices, not requirements stated verbatim in the brief.
 
 1. User data access service
-   - `POST /api/users` to create a user
-   - `POST /api/auth/token` to create an access token
+   - Proposed route: `POST /api/users` to create a user
+   - Proposed route: `POST /api/auth/token` to create an access token
    - Inputs: first name, last name, email, password, image
    - Passwords must be stored securely
    - Token response should be a generated JWT or equivalent access token
 
 2. Operative service
-   - `POST /api/dice/roll` to simulate rolling two dice
-   - `GET /api/dice/history` to retrieve saved records for the current user
-   - All calls require token-based authentication
+   - Proposed route: `POST /api/dice/roll` to simulate rolling two dice
+   - Proposed route: `GET /api/dice/history` to retrieve saved records for the current user
+   - Both operative-service endpoints require token-based authentication
    - Saved dice results must be stored per user
-   - History supports filters by all records / year / month-year / day
+   - History supports filters by all records / year / month-year / a complete calendar day (month/year/day)
    - Sorting supports date/time and dice-sum in both directions
-   - Sorting precedence: when both sort directions are used, the date filter group has more weight
+   - Sorting precedence: when both sorts are used, sorting by dice sum (sorting option ii) has more weight than sorting by date/time (sorting option i)
    - Pagination is required with page size and page index metadata
 
 ## Recommended architecture
@@ -70,7 +70,7 @@ This plan is based on the task description in the repository and the PDF version
 - Acceptance criteria:
   - Users can be saved to the database
   - Dice rolls are saved per authenticated user
-  - Model constraints prevent duplicates or invalid email values
+  - Recommended data-integrity constraints prevent duplicate emails and malformed email values
 
 ### Task 4: Implement the user creation endpoint
 - Goal: add user registration flow in the user access service
@@ -78,12 +78,12 @@ This plan is based on the task description in the repository and the PDF version
   - Request DTO for `CreateUserRequest`
   - Validation rules for all required fields
   - Password hashing (Argon2id, bcrypt, or PBKDF2 preferred)
-  - Unique email check
+  - Recommended unique email check
   - Response DTO for created user
 - Acceptance criteria:
   - A new user is created with a hashed password
   - Invalid payloads return 400 with validation errors
-  - Duplicate email addresses are rejected cleanly
+  - Duplicate email addresses are rejected cleanly (recommended behavior; the original brief does not specify duplicate-account handling)
 
 ### Task 5: Implement access token creation
 - Goal: authenticate by email and password and issue a token
@@ -127,11 +127,12 @@ This plan is based on the task description in the repository and the PDF version
 - Deliverables:
   - `GET /api/dice/history`
   - query parameters for filters: `all`, `year`, `monthYear`, `day`
+  - day-level filtering must identify a complete calendar day; define whether the API accepts a full date or combines `day` with `monthYear`
   - filter logic for the current user only
   - data retrieval from the database by user id
 - Acceptance criteria:
   - History returns only records belonging to the authenticated user
-  - Filters work correctly for all supported date granularities
+  - Filters work correctly for all supported date granularities, including an unambiguous month/year/day selection
   - Empty sets return a valid empty response, not an exception
 
 ### Task 9: Add sorting and sorting precedence rules
